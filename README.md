@@ -1,7 +1,4 @@
-<div align="center">
 WISER
-<br/>
-
 ```
 
 ### 🎓 Where Students Connect, Learn & Grow Together
