@@ -1,7 +1,8 @@
-WISER
-```
+<div align="center">
 
-### 🎓 Where Students Connect, Learn & Grow Together
+# WISER
+
+**Where Students Connect, Learn & Grow Together**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18.x_LTS-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -11,13 +12,11 @@ WISER
 [![WebRTC](https://img.shields.io/badge/WebRTC-Native-333333?style=flat-square&logo=webrtc&logoColor=white)](https://webrtc.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-<br/>
-
 </div>
 
 ---
 
-## ✨ What is WISER?
+## What is WISER?
 
 **WISER** is a real-time educational social platform built for students. It's a place where learners can share knowledge through posts, engage in discussions via comments and likes, connect through private messages, and collaborate in a shared group space — all powered by a modern Node.js + TypeScript backend.
 
@@ -25,7 +24,7 @@ WISER
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 | Feature | Description |
 |---|---|
@@ -38,11 +37,11 @@ WISER
 | 📞 **Voice Calls** | Peer-to-peer voice calling between online students |
 | 🎥 **Video Calls** | Face-to-face video sessions for study and collaboration |
 | 🟢 **Live Presence** | See who's online in real time |
-| 🔐 **Secure Auth** | JWT-based registration and login system |
+
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -59,7 +58,7 @@ WISER
 ```
 
 <details>
-<summary><strong>📋 Full Technology Table</strong></summary>
+<summary><strong>Full Technology Table</strong></summary>
 <br/>
 
 | Category | Technology | Version | Purpose |
@@ -82,7 +81,7 @@ WISER
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 wiser/
@@ -113,38 +112,23 @@ wiser/
 
 ---
 
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-Before you begin, make sure you have the following installed:
-
 - ✅ [Node.js](https://nodejs.org/) — v18.x LTS or higher
-- ✅ [MongoDB](https://www.mongodb.com/) — v6.x (local installation or [MongoDB Atlas](https://www.mongodb.com/atlas))
+- ✅ [MongoDB](https://www.mongodb.com/) — v6.x (local or [MongoDB Atlas](https://www.mongodb.com/atlas))
 - ✅ npm — comes bundled with Node.js
-
----
 
 ### Installation
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/your-username/wiser.git
 cd wiser
 
-# 2. Install dependencies
+# Install dependencies
 npm install
-
-
----
-
-# MongoDB Connection
-MONGO_URI=mongodb://localhost:27017/wiser
-
-```
-
----
 
 ### Build & Run
 
@@ -155,15 +139,15 @@ npm run build
 # Start the production server
 npm start
 
-# Or run in development mode (with auto-reload)
+# Run in development mode with auto-reload
 npm run dev
 ```
 
-🎉 The app will be live at **`http://localhost:3000`**
+The app will be live at `http://localhost:3000`
 
 ---
 
-## 📜 Scripts
+## Scripts
 
 | Script | Command | Description |
 |---|---|---|
@@ -173,9 +157,9 @@ npm run dev
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! If you'd like to improve WISER:
+Contributions are welcome! To get started:
 
 1. Fork the repository
 2. Create a feature branch — `git checkout -b feature/your-feature-name`
@@ -187,7 +171,7 @@ Please follow the existing code style and write clear commit messages.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
@@ -197,6 +181,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 Made with ❤️ for students, by students.
 
-**WISER** — *Learn together. Grow together.*
+*Learn together. Grow together.*
 
 </div>
