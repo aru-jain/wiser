@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wiser – Chat</title>
+  <link rel="stylesheet" href="chat.css" />
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ═══════════════════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════════════════════ -->
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <div class="brand">Wi<span>ser</span></div>
+      <div class="tagline">Learning together</div>
+    </div>
+    <div class="sidebar-section-label">Channels</div>
+    <div id="conv-list">
+      <div class="conv-item active" data-target="global" id="conv-global">
+        <div class="conv-avatar" style="background:linear-gradient(135deg,#9a5c18,#c47b2b)">#</div>
+        <div class="conv-info">
+          <div class="conv-name">General</div>
+          <div class="conv-preview">Everyone</div>
+        </div>
+      </div>
+      <div class="sidebar-section-label">Students</div>
+    </div>
+    <div id="sidebar-footer">
+      <div class="self-avatar" id="self-avatar">?</div>
+      <div>
+        <div class="self-name" id="self-name-display">—</div>
+        <div class="self-role">Student</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN CHAT PANEL
+  ════════════════════════════════════════════════════ -->
+  <main id="chat-panel">
+    <div id="chat-header">
+      <div id="chat-header-left">
+        <div id="chat-header-avatar">#</div>
+        <div>
+          <div id="chat-title">General</div>
+          <div id="chat-subtitle">Public channel · all students</div>
+        </div>
+      </div>
+      <div id="header-actions">
+        <!-- Call buttons shown only in DM view -->
+        <button id="btn-audio-call" class="call-action-btn" title="Voice call" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        </button>
+        <button id="btn-video-call" class="call-action-btn" title="Video call" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </button>
+        <div id="online-badge">0 online</div>
+      </div>
+    </div>
+
+    <div id="messages"></div>
+
+    <div id="chat-footer">
+      <input type="file" id="file-input" accept="*/*" />
+      <button class="footer-btn" id="attach-btn" title="Attach file">📎</button>
+      <input type="text" id="message-input" placeholder="Write a message…" autocomplete="off" maxlength="500" />
+      <span id="rec-timer">0:00</span>
+      <button class="footer-btn" id="voice-btn" title="Hold to record voice note">🎤</button>
+      <button id="send-btn">Send</button>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     INCOMING CALL MODAL
+════════════════════════════════════════════════════════ -->
+<div id="call-modal" class="call-modal hidden">
+  <div class="call-modal-inner">
+    <div class="call-modal-avatar" id="call-modal-avatar">?</div>
+    <div class="call-modal-name"   id="call-modal-name">Someone</div>
+    <div class="call-modal-type"   id="call-modal-type">is calling…</div>
+    <div class="call-modal-actions">
+      <button class="call-modal-btn decline" id="btn-reject">✕ Decline</button>
+      <button class="call-modal-btn accept"  id="btn-accept">✓ Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     ACTIVE CALL OVERLAY
+════════════════════════════════════════════════════════ -->
+<div id="call-overlay" class="call-overlay hidden">
+  <!-- Video elements -->
+  <video id="remote-video" autoplay playsinline></video>
+  <video id="local-video"  autoplay playsinline muted></video>
+
+  <!-- HUD -->
+  <div class="call-hud">
+    <div class="call-peer-name" id="call-peer-label">—</div>
+    <div class="call-status"    id="call-status-label">Connecting…</div>
+    <div class="call-timer"     id="call-timer-display">0:00</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="call-controls">
+    <button class="ctrl-btn" id="ctrl-mute"   title="Mute">🎙</button>
+    <button class="ctrl-btn" id="ctrl-video"  title="Toggle camera" style="display:none">📷</button>
+    <button class="ctrl-btn end" id="ctrl-end" title="End call">📵</button>
+  </div>
+
+  <!-- Hidden audio for voice calls -->
+  <audio id="remote-audio" autoplay></audio>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  AUTH & STATE
+// ═══════════════════════════════════════════════════════════════
+const userId   = localStorage.getItem('userId')   || 'anonymous';
+const username = localStorage.getItem('username') || userId;
+
+let activeTarget  = 'global';
+let onlineUserMap = {};
+const msgCache    = { global: [] };
+const usernameMap = {};
+usernameMap[userId] = username;
+
+// ═══════════════════════════════════════════════════════════════
+//  SOCKET
+// ═══════════════════════════════════════════════════════════════
+const socket = io();
+
+// ═══════════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════════
+const messagesEl    = document.getElementById('messages');
+const inputEl       = document.getElementById('message-input');
+const sendBtn       = document.getElementById('send-btn');
+const onlineBadge   = document.getElementById('online-badge');
+const convList      = document.getElementById('conv-list');
+const chatTitle     = document.getElementById('chat-title');
+const chatSubtitle  = document.getElementById('chat-subtitle');
+const headerAvatar  = document.getElementById('chat-header-avatar');
+const attachBtn     = document.getElementById('attach-btn');
+const fileInput     = document.getElementById('file-input');
+const voiceBtn      = document.getElementById('voice-btn');
+const recTimer      = document.getElementById('rec-timer');
+const btnAudioCall  = document.getElementById('btn-audio-call');
+const btnVideoCall  = document.getElementById('btn-video-call');
+
+document.getElementById('self-name-display').textContent = username;
+document.getElementById('self-avatar').textContent = initials(username);
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+function initials(name) {
+  if (!name) return '?';
+  return name.split(/[\s_-]+/).map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+function avatarColor(name) {
+  const palette = [
+    ['#9a5c18','#c47b2b'],['#1a5c3a','#2e9e66'],
+    ['#3a2b7a','#6650d4'],['#7a1a2e','#c43054'],
+    ['#1a4a6e','#2e7ab8'],['#5c3a00','#a06a00'],
+  ];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h*31 + name.charCodeAt(i)) & 0xffffffff;
+  const [a,b] = palette[Math.abs(h) % palette.length];
+  return `linear-gradient(135deg,${a},${b})`;
+}
+function displayName(uid) { return usernameMap[uid] || uid; }
+
+// ═══════════════════════════════════════════════════════════════
+//  WEBRTC CALLING
+// ═══════════════════════════════════════════════════════════════
+let pc            = null;   // RTCPeerConnection
+let localStream   = null;   // MediaStream
+let callPeer      = null;   // userId of peer we're in a call with
+let callType      = null;   // "audio" | "video"
+let callTimerInt  = null;
+let callSeconds   = 0;
+let muted         = false;
+let videoOff      = false;
+
+const ICE_CONFIG = {
+  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+};
+
+// DOM for call UI
+const callModal       = document.getElementById('call-modal');
+const callModalAvatar = document.getElementById('call-modal-avatar');
+const callModalName   = document.getElementById('call-modal-name');
+const callModalType   = document.getElementById('call-modal-type');
+const btnReject       = document.getElementById('btn-reject');
+const btnAccept       = document.getElementById('btn-accept');
+
+const callOverlay     = document.getElementById('call-overlay');
+const remoteVideo     = document.getElementById('remote-video');
+const localVideo      = document.getElementById('local-video');
+const remoteAudio     = document.getElementById('remote-audio');
+const callPeerLabel   = document.getElementById('call-peer-label');
+const callStatusLabel = document.getElementById('call-status-label');
+const callTimerDisp   = document.getElementById('call-timer-display');
+const ctrlMute        = document.getElementById('ctrl-mute');
+const ctrlVideo       = document.getElementById('ctrl-video');
+const ctrlEnd         = document.getElementById('ctrl-end');
+
+// Pending incoming offer (stored while user decides)
+let pendingOffer = null;
+
+// ── Initiate a call ─────────────────────────────────────────────────────────
+async function startCall(peerId, peerName, type) {
+  if (callPeer) return; // already in a call
+  callPeer = peerId;
+  callType = type;
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: type === 'video',
+    });
+  } catch {
+    alert('Could not access camera/microphone. Please check permissions.');
+    callPeer = null;
+    return;
+  }
+
+  showCallOverlay(peerName, type, false);
+
+  pc = new RTCPeerConnection(ICE_CONFIG);
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+  pc.ontrack = e => handleRemoteTrack(e, type);
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit('call:ice', { to: peerId, candidate: e.candidate });
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('call:offer', { to: peerId, from: userId, fromName: username, offer, callType: type });
+}
+
+// ── Accept incoming call ────────────────────────────────────────────────────
+async function acceptCall() {
+  if (!pendingOffer) return;
+  const { from, fromName, offer, callType: type } = pendingOffer;
+  pendingOffer = null;
+  callPeer = from;
+  callType = type;
+  hideCallModal();
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: type === 'video',
+    });
+  } catch {
+    alert('Could not access camera/microphone.');
+    callPeer = null;
+    return;
+  }
+
+  showCallOverlay(fromName, type, true);
+
+  pc = new RTCPeerConnection(ICE_CONFIG);
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+  pc.ontrack = e => handleRemoteTrack(e, type);
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit('call:ice', { to: from, candidate: e.candidate });
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit('call:answer', { to: from, from: userId, answer });
+  startCallTimer();
+}
+
+// ── Handle remote track ─────────────────────────────────────────────────────
+function handleRemoteTrack(e, type) {
+  const stream = e.streams[0];
+  if (type === 'video') {
+    remoteVideo.srcObject = stream;
+  } else {
+    remoteAudio.srcObject = stream;
+  }
+}
+
+// ── End / clean up call ─────────────────────────────────────────────────────
+function endCall(notify = true) {
+  if (notify && callPeer) {
+    socket.emit('call:end', { to: callPeer, from: userId });
+  }
+  if (pc) { pc.close(); pc = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  remoteVideo.srcObject = null;
+  remoteAudio.srcObject = null;
+  localVideo.srcObject  = null;
+  clearInterval(callTimerInt);
+  callTimerInt = null;
+  callSeconds  = 0;
+  callPeer = null;
+  callType = null;
+  muted    = false;
+  videoOff = false;
+  hideCallOverlay();
+  hideCallModal();
+}
+
+// ── Timer ───────────────────────────────────────────────────────────────────
+function startCallTimer() {
+  callSeconds = 0;
+  callStatusLabel.textContent = 'Connected';
+  callTimerInt = setInterval(() => {
+    callSeconds++;
+    const m = Math.floor(callSeconds / 60);
+    const s = String(callSeconds % 60).padStart(2,'0');
+    callTimerDisp.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function showCallOverlay(peerName, type, isAnswer) {
+  callPeerLabel.textContent   = peerName;
+  callStatusLabel.textContent = isAnswer ? 'Connected' : 'Calling…';
+  callTimerDisp.textContent   = '0:00';
+  ctrlVideo.style.display     = type === 'video' ? 'flex' : 'none';
+
+  if (type === 'video' && localStream) {
+    localVideo.srcObject = localStream;
+    remoteVideo.style.display = 'block';
+    localVideo.style.display  = 'block';
+  } else {
+    remoteVideo.style.display = 'none';
+    localVideo.style.display  = 'none';
+  }
+
+  callOverlay.classList.remove('hidden');
+}
+
+function hideCallOverlay()  { callOverlay.classList.add('hidden'); }
+
+function showCallModal(from, fromName, type) {
+  callModalAvatar.textContent  = initials(fromName);
+  callModalName.textContent    = fromName;
+  callModalType.textContent    = type === 'video' ? '📹 Video call incoming…' : '📞 Voice call incoming…';
+  callModal.classList.remove('hidden');
+}
+
+function hideCallModal() { callModal.classList.add('hidden'); }
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+ctrlMute.addEventListener('click', () => {
+  if (!localStream) return;
+  muted = !muted;
+  localStream.getAudioTracks().forEach(t => { t.enabled = !muted; });
+  ctrlMute.textContent = muted ? '🔇' : '🎙';
+  ctrlMute.classList.toggle('active', muted);
+});
+
+ctrlVideo.addEventListener('click', () => {
+  if (!localStream) return;
+  videoOff = !videoOff;
+  localStream.getVideoTracks().forEach(t => { t.enabled = !videoOff; });
+  ctrlVideo.textContent = videoOff ? '🚫' : '📷';
+  ctrlVideo.classList.toggle('active', videoOff);
+});
+
+ctrlEnd.addEventListener('click', () => endCall(true));
+
+btnReject.addEventListener('click', () => {
+  if (pendingOffer) {
+    socket.emit('call:reject', { to: pendingOffer.from, from: userId });
+    pendingOffer = null;
+  }
+  hideCallModal();
+});
+
+btnAccept.addEventListener('click', acceptCall);
+
+// ── Header call buttons ───────────────────────────────────────────────────────
+btnAudioCall.addEventListener('click', () => {
+  if (activeTarget !== 'global') {
+    startCall(activeTarget, displayName(activeTarget), 'audio');
+  }
+});
+btnVideoCall.addEventListener('click', () => {
+  if (activeTarget !== 'global') {
+    startCall(activeTarget, displayName(activeTarget), 'video');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  SOCKET: CALL EVENTS
+// ═══════════════════════════════════════════════════════════════
+socket.on('call:incoming', ({ from, fromName, offer, callType: type }) => {
+  if (callPeer) {
+    // Already in a call — auto-reject
+    socket.emit('call:reject', { to: from, from: userId });
+    return;
+  }
+  pendingOffer = { from, fromName, offer, callType: type };
+  usernameMap[from] = fromName;
+  showCallModal(from, fromName, type);
+});
+
+socket.on('call:answered', async ({ from, answer }) => {
+  if (!pc) return;
+  await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  startCallTimer();
+});
+
+socket.on('call:ice', async ({ candidate }) => {
+  if (!pc) return;
+  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+});
+
+socket.on('call:ended',   () => endCall(false));
+socket.on('call:rejected', () => {
+  alert(`${displayName(callPeer)} declined the call.`);
+  endCall(false);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  MESSAGING HELPERS
+// ═══════════════════════════════════════════════════════════════
+function deleteMessage(msgId, scope) {
+  if (!msgId) return;
+  if (scope === 'dm' || activeTarget !== 'global') {
+    socket.emit('chat:dm:delete', { msgId, userId });
+  } else {
+    socket.emit('chat:delete', { msgId, userId });
+  }
+}
+
+function buildAttachment(msg) {
+  const { fileUrl, mimeType, originalName } = msg;
+  if (mimeType && mimeType.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.src = fileUrl; img.className = 'chat-img';
+    img.alt = originalName || 'image';
+    img.onclick = () => window.open(fileUrl, '_blank');
+    return img;
+  }
+  if (mimeType && mimeType.startsWith('audio/')) {
+    const audio = document.createElement('audio');
+    audio.src = fileUrl; audio.controls = true;
+    return audio;
+  }
+  const a = document.createElement('a');
+  a.href = fileUrl; a.target = '_blank'; a.className = 'file-attachment';
+  a.innerHTML = `<span class="file-icon">📄</span><span>${originalName || 'Download file'}</span>`;
+  return a;
+}
+
+function renderMessages(target) {
+  messagesEl.innerHTML = '';
+  (msgCache[target] || []).forEach(m => appendBubble(m, false));
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function appendBubble(msg, scroll = true) {
+  const { sender, text, timestamp, system, fileUrl } = msg;
+  const div = document.createElement('div');
+
+  if (system) {
+    div.className = 'msg system';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    div.appendChild(bubble);
+  } else {
+    const isMine = sender === userId;
+    div.className = `msg ${isMine ? 'mine' : 'theirs'}`;
+    if (msg._id) div.dataset.msgId = msg._id;
+
+    if (isMine && msg._id) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.title = 'Delete';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', () => deleteMessage(msg._id, msg.scope));
+      div.appendChild(delBtn);
+    }
+
+    const label = document.createElement('div');
+    label.className = 'sender-label';
+    label.textContent = isMine ? 'You' : displayName(sender);
+    div.appendChild(label);
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if (fileUrl) {
+      bubble.appendChild(buildAttachment(msg));
+    } else {
+      bubble.textContent = text;
+    }
+    div.appendChild(bubble);
+
+    const ts = document.createElement('div');
+    ts.className = 'ts';
+    ts.textContent = formatTime(timestamp);
+    div.appendChild(ts);
+  }
+
+  messagesEl.appendChild(div);
+  if (scroll) messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONVERSATION SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTo(target, name) {
+  activeTarget = target;
+  document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+  const item = document.querySelector(`.conv-item[data-target="${target}"]`);
+  if (item) item.classList.add('active');
+
+  const isDM = target !== 'global';
+  btnAudioCall.style.display = isDM ? 'flex' : 'none';
+  btnVideoCall.style.display = isDM ? 'flex' : 'none';
+
+  if (!isDM) {
+    chatTitle.textContent = 'General';
+    chatSubtitle.textContent = 'Public channel · all students';
+    headerAvatar.textContent = '#';
+    headerAvatar.style.background = 'linear-gradient(135deg,#9a5c18,#c47b2b)';
+  } else {
+    chatTitle.textContent = name;
+    chatSubtitle.innerHTML = `<span class="private-badge">🔒 Private</span>`;
+    headerAvatar.textContent = initials(name);
+    headerAvatar.style.background = avatarColor(name);
+  }
+
+  if (!msgCache[target]) {
+    msgCache[target] = [];
+    socket.emit('chat:dm:history', { with: target });
+  }
+  renderMessages(target);
+  inputEl.focus();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SIDEBAR USER LIST
+// ═══════════════════════════════════════════════════════════════
+function rebuildUserList(users) {
+  document.querySelectorAll('.conv-item.dm-user').forEach(el => el.remove());
+
+  users.forEach(u => {
+    const uid   = typeof u === 'object' ? u.userId   : u;
+    const uname = typeof u === 'object' ? u.username : u;
+    if (uid === userId) return;
+    usernameMap[uid] = uname;
+
+    const existing = document.querySelector(`.conv-item[data-target="${uid}"]`);
+    if (existing) {
+      const n = existing.querySelector('.conv-name');
+      if (n) n.textContent = uname;
+      return;
+    }
+
+    const item = document.createElement('div');
+    item.className = 'conv-item dm-user';
+    item.dataset.target = uid;
+
+    // Avatar
+    const av = document.createElement('div');
+    av.className = 'conv-avatar';
+    av.style.background = avatarColor(uname);
+    av.textContent = initials(uname);
+
+    const dot = document.createElement('span');
+    dot.className = 'status-dot';
+    dot.id = `dot-${uid}`;
+    if (!onlineUserMap[uid]) dot.style.background = '#555';
+    av.appendChild(dot);
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'conv-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'conv-name';
+    nameEl.textContent = uname;
+
+    const preview = document.createElement('div');
+    preview.className = 'conv-preview';
+    preview.textContent = 'Click to message';
+
+    info.appendChild(nameEl);
+    info.appendChild(preview);
+
+    // Call buttons in sidebar row
+    const callBtns = document.createElement('div');
+    callBtns.className = 'sidebar-call-btns';
+
+    const audioBtn = document.createElement('button');
+    audioBtn.className = 'sidebar-call-btn';
+    audioBtn.title = 'Voice call';
+    audioBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>`;
+    audioBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      startCall(uid, uname, 'audio');
+    });
+
+    const videoBtn = document.createElement('button');
+    videoBtn.className = 'sidebar-call-btn';
+    videoBtn.title = 'Video call';
+    videoBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`;
+    videoBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      startCall(uid, uname, 'video');
+    });
+
+    callBtns.appendChild(audioBtn);
+    callBtns.appendChild(videoBtn);
+
+    item.appendChild(av);
+    item.appendChild(info);
+    item.appendChild(callBtns);
+    item.addEventListener('click', () => switchTo(uid, uname));
+    convList.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILE / VOICE UPLOAD
+// ═══════════════════════════════════════════════════════════════
+async function uploadAndSend(file, mimeTypeOverride) {
+  const formData = new FormData();
+  formData.append('file', file);
+  let data;
+  try {
+    const res = await fetch('http://localhost:3000/chat-upload', { method:'POST', body:formData });
+    data = await res.json();
+  } catch {
+    alert('Upload failed.');
+    return;
+  }
+  const payload = {
+    fileUrl: data.url, mimeType: mimeTypeOverride || data.mimeType,
+    originalName: data.originalName, text: '',
+  };
+  if (activeTarget === 'global') {
+    socket.emit('chat:message', { userId, ...payload });
+  } else {
+    socket.emit('chat:dm', { from: userId, to: activeTarget, ...payload });
+  }
+}
+
+function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  if (activeTarget === 'global') {
+    socket.emit('chat:message', { userId, text });
+  } else {
+    socket.emit('chat:dm', { from: userId, to: activeTarget, text });
+  }
+  inputEl.value = '';
+}
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  await uploadAndSend(file);
+  fileInput.value = '';
+});
+
+sendBtn.addEventListener('click', sendMessage);
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ── Voice recording ───────────────────────────────────────────
+let mediaRecorder = null;
+let audioChunks   = [];
+let recInterval   = null;
+let recSeconds    = 0;
+
+function startRecTimer() {
+  recSeconds = 0;
+  recTimer.textContent = '0:00';
+  recTimer.classList.add('visible');
+  recInterval = setInterval(() => {
+    recSeconds++;
+    const m = Math.floor(recSeconds/60);
+    const s = String(recSeconds%60).padStart(2,'0');
+    recTimer.textContent = `${m}:${s}`;
+  }, 1000);
+}
+function stopRecTimer() {
+  clearInterval(recInterval);
+  recTimer.classList.remove('visible');
+}
+async function startRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') return;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch { alert('Microphone access denied.'); return; }
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.ondataavailable = e => { if (e.data.size>0) audioChunks.push(e.data); };
+  mediaRecorder.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    stopRecTimer();
+    voiceBtn.classList.remove('recording');
+    if (!audioChunks.length) return;
+    const blob = new Blob(audioChunks, { type:'audio/webm' });
+    const file = new File([blob], `voice-${Date.now()}.webm`, { type:'audio/webm' });
+    await uploadAndSend(file, 'audio/webm');
+  };
+  mediaRecorder.start();
+  voiceBtn.classList.add('recording');
+  startRecTimer();
+}
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+}
+voiceBtn.addEventListener('mousedown',  startRecording);
+voiceBtn.addEventListener('mouseup',    stopRecording);
+voiceBtn.addEventListener('mouseleave', stopRecording);
+voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+voiceBtn.addEventListener('touchend',   e => { e.preventDefault(); stopRecording(); });
+
+// ═══════════════════════════════════════════════════════════════
+//  SOCKET EVENTS — CHAT
+// ═══════════════════════════════════════════════════════════════
+socket.on('connect', () => socket.emit('chat:join', { userId, username }));
+
+socket.on('chat:history', history => {
+  msgCache['global'] = history.map(m => ({
+    _id: m._id, scope: 'global',
+    sender: m.userId, text: m.text, timestamp: m.timestamp,
+    fileUrl: m.fileUrl, mimeType: m.mimeType, originalName: m.originalName,
+  }));
+  if (activeTarget === 'global') renderMessages('global');
+});
+
+socket.on('chat:message', msg => {
+  const entry = {
+    _id: msg._id, scope: 'global',
+    sender: msg.userId, text: msg.text, timestamp: msg.timestamp,
+    fileUrl: msg.fileUrl, mimeType: msg.mimeType, originalName: msg.originalName,
+  };
+  msgCache['global'].push(entry);
+  if (activeTarget === 'global') appendBubble(entry);
+});
+
+socket.on('chat:dm:history', ({ with: peer, messages }) => {
+  msgCache[peer] = messages.map(m => ({
+    _id: m._id, scope: 'dm',
+    sender: m.from, text: m.text, timestamp: m.timestamp,
+    fileUrl: m.fileUrl, mimeType: m.mimeType, originalName: m.originalName,
+  }));
+  if (activeTarget === peer) renderMessages(peer);
+});
+
+socket.on('chat:dm', ({ _id, from, to, text, timestamp, fileUrl, mimeType, originalName }) => {
+  const peer  = from === userId ? to : from;
+  const entry = { _id, scope:'dm', sender:from, text, timestamp, fileUrl, mimeType, originalName };
+  if (!msgCache[peer]) msgCache[peer] = [];
+  msgCache[peer].push(entry);
+  if (activeTarget === peer) appendBubble(entry);
+  const preview = document.querySelector(`.conv-item[data-target="${peer}"] .conv-preview`);
+  if (preview) {
+    const prefix = from === userId ? 'You: ' : '';
+    preview.textContent = fileUrl
+      ? prefix + (mimeType?.startsWith('audio') ? '🎤 Voice message' : '📎 Attachment')
+      : prefix + text.slice(0,30);
+  }
+});
+
+socket.on('chat:users', users => {
+  onlineUserMap = {};
+  users.forEach(u => { onlineUserMap[typeof u==='object'?u.userId:u] = true; });
+  rebuildUserList(users);
+  document.querySelectorAll('.status-dot').forEach(dot => {
+    const uid = dot.id.replace('dot-','');
+    dot.style.background = onlineUserMap[uid] ? 'var(--green)' : '#555';
+  });
+});
+
+socket.on('chat:online', count => { onlineBadge.textContent = `${count} online`; });
+
+socket.on('chat:notification', text => {
+  const entry = { system:true, text, timestamp:Date.now() };
+  msgCache['global'].push(entry);
+  if (activeTarget === 'global') appendBubble(entry);
+});
+
+socket.on('chat:deleted', ({ msgId, scope, peer }) => {
+  const target = scope === 'global' ? 'global' : (peer || activeTarget);
+  if (msgCache[target]) msgCache[target] = msgCache[target].filter(m => m._id !== msgId);
+  const el = document.querySelector(`.msg[data-msg-id="${msgId}"]`);
+  if (el) {
+    el.classList.add('deleted');
+    const bubble = el.querySelector('.bubble');
+    if (bubble) { bubble.innerHTML = ''; bubble.textContent = 'Message deleted'; }
+    const delBtn = el.querySelector('.delete-btn');
+    if (delBtn) delBtn.remove();
+  }
+});
+
+document.getElementById('conv-global').addEventListener('click', () => switchTo('global','General'));
+</script>
+</body>
+</html>

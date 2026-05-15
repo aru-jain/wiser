@@ -1,0 +1,290 @@
+/* ============================================================
+   EduShare — Login Page
+   Aesthetic: Warm Academic / Cozy Library (matches style.css)
+   Fonts: Playfair Display (heading) + DM Sans (body)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ---- Variables ---- */
+:root {
+  --bg:        #f5f0e8;
+  --surface:   #fffdf8;
+  --ink:       #1c1a14;
+  --ink-light: #6b6455;
+  --accent:    #c8813a;
+  --accent-2:  #4a7c65;
+  --danger:    #c0392b;
+  --border:    #ddd4c0;
+  --shadow-sm: 0 2px 12px rgba(28, 26, 20, 0.08);
+  --shadow-md: 0 12px 40px rgba(28, 26, 20, 0.14);
+  --radius:    16px;
+  --radius-sm: 10px;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Full-page centered layout ---- */
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  /* Ambient background glow */
+  background-image:
+    radial-gradient(ellipse 70% 60% at 15% 10%, rgba(200, 129, 58, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 90%, rgba(74, 124, 101, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(200, 129, 58, 0.04) 0%, transparent 70%);
+}
+
+/* ---- Login Card ---- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Wrap everything in a card feel using body's flex child */
+h2,
+input,
+button,
+p {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Card container effect — pseudo-element on body */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* The actual card background */
+body {
+  position: relative;
+}
+
+body > h2 {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 40px 36px 28px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+
+  /* Gradient text */
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background-image: linear-gradient(120deg, var(--accent) 0%, #8b4513 45%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+
+  /* Decorative underline */
+  position: relative;
+  animation: fadeDown 0.5s ease both;
+}
+
+body > h2::after {
+  content: '✦';
+  display: block;
+  font-size: 1rem;
+  margin-top: 10px;
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0.6;
+  animation: spin 8s linear infinite;
+}
+
+/* ---- Inputs ---- */
+input {
+  display: block;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-bottom: none;
+  border-radius: 0;
+  padding: 15px 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  box-shadow: var(--shadow-sm);
+  animation: fadeUp 0.5s ease both;
+}
+
+input:nth-of-type(1) { animation-delay: 0.08s; }
+input:nth-of-type(2) { animation-delay: 0.16s; }
+
+input::placeholder {
+  color: var(--ink-light);
+  font-weight: 300;
+}
+
+input:focus {
+  background: #fffef9;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(200, 129, 58, 0.15), var(--shadow-sm);
+  z-index: 2;
+  position: relative;
+}
+
+/* ---- Login Button ---- */
+button {
+  display: block;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, #a0522d 100%);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(200, 129, 58, 0.4), var(--shadow-sm);
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fadeUp 0.5s ease 0.24s both;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 60%);
+  pointer-events: none;
+}
+
+button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0);
+  transition: background 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(200, 129, 58, 0.5);
+  background: linear-gradient(135deg, #d4913f 0%, #b35c2a 100%);
+}
+
+button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(200, 129, 58, 0.3);
+}
+
+/* ---- Sign-up paragraph ---- */
+p {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 18px 24px 28px;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--ink-light);
+  box-shadow: var(--shadow-md);
+  animation: fadeUp 0.5s ease 0.32s both;
+}
+
+p a {
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+  transition: color 0.18s;
+}
+
+p a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: var(--accent-2);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s ease;
+}
+
+p a:hover {
+  color: #3a6452;
+}
+
+p a:hover::after {
+  transform: scaleX(1);
+}
+
+/* ---- Decorative top bar on card ---- */
+body > h2 {
+  border-top: 3px solid transparent;
+  border-image: linear-gradient(90deg, var(--accent), var(--accent-2)) 1;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* ---- Animations ---- */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-light); }
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  body > h2 {
+    padding: 30px 24px 22px;
+    font-size: 1.7rem;
+  }
+
+  input, button {
+    font-size: 0.92rem;
+    padding: 13px 18px;
+  }
+
+  p {
+    padding: 16px 20px 24px;
+  }
+}
